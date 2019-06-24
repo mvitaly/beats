@@ -26,14 +26,29 @@ import (
 )
 
 func MakeTimestampEncoder() func(*time.Time, structform.ExtVisitor) error {
-	formatter, err := dtfmt.NewFormatter("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+	return MakeUTCOrLocalTimestampEncoder(false)
+}
+
+func MakeUTCOrLocalTimestampEncoder(localTime bool) func(*time.Time, structform.ExtVisitor) error {
+	var dtPattern string
+	if localTime {
+		dtPattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+	} else {
+		dtPattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+	}
+
+	formatter, err := dtfmt.NewFormatter(dtPattern)
 	if err != nil {
 		panic(err)
 	}
 
 	buf := make([]byte, 0, formatter.EstimateSize())
 	return func(t *time.Time, v structform.ExtVisitor) error {
-		tmp, err := formatter.AppendTo(buf, (*t).UTC())
+		outTime := *t
+		if !localTime {
+			outTime = outTime.UTC()
+		}
+		tmp, err := formatter.AppendTo(buf, outTime)
 		if err != nil {
 			return err
 		}
